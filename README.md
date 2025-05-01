@@ -12,6 +12,8 @@ This tool is designed to scan student documents for plagiarism and extract key i
 ###  Plagiarism Detection  
 - **Rabin-Karp Algorithm**: Efficient rolling-hash string matching for duplicate phrase detection.  
 - **KMP Algorithm**: Pattern searching for consistent phrase matches.  
+
+###  Search
 - **Naive Search**: Fast keyword/phrase lookups for real-time search during document review.
 
 ###  Compression  
