@@ -1,175 +1,131 @@
-import heapq
-import os
-from collections import Counter
-from bitarray import bitarray
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext
+from tkinter import filedialog, scrolledtext
+import heapq
+from collections import defaultdict
+import os
 
-# Huffman Tree Node Class
-class Node:
-    def __init__(self, freq, char=None, left=None, right=None):
-        self.freq = freq
-        self.char = char
-        self.left = left
-        self.right = right
-    def __lt__(self, other):
-         return self.freq < other.freq
+# ==================== Huffman Coding Utilities ====================
 
-# Select File
-def select_file():
-    filename = filedialog.askopenfilename(title="Select a text file",
-                                            filetypes=[("Text Files", "*.txt")])
-    return filename
+def build_frequency_table(text):
+    return defaultdict(int, {char: text.count(char) for char in set(text)})
 
-# Read the Selected File
-def read_input_file():
-    global input_filename
-    nput_filename = select_file()
-    if not input_filename:
-        messagebox.showwarning("Warning", "No file selected!")
-        return None
-    with open(input_filename, "r", encoding="utf-8") as file:
-        return file.read().strip()
-
-# Build Huffman Tree
-def build_huffman_tree(text):
-    frequency = Counter(text)
-    heap = [Node(freq, char) for char, freq in frequency.items()]
+def build_huffman_tree(frequency):
+    heap = [[freq, [char, ""]] for char, freq in frequency.items()]
     heapq.heapify(heap)
+
     while len(heap) > 1:
-        left = heapq.heappop(heap)
-        right = heapq.heappop(heap)
-        merged = Node(left.freq + right.freq, left=left, right=right)
-        heapq.heappush(heap, merged)
-    return heap[0]
+        low1 = heapq.heappop(heap)
+        low2 = heapq.heappop(heap)
 
-# Generate Huffman Codes
-def generate_codes(node, current_code="", codes={}):
-    if node.char:
-        codes[node.char] = current_code
-        return
-    generate_codes(node.left, current_code + "0", codes)
-    generate_codes(node.right, current_code + "1", codes)
-    return codes
+        for pair in low1[1:]:
+            pair[1] = '0' + pair[1]
+        for pair in low2[1:]:
+            pair[1] = '1' + pair[1]
 
-# Encode Text
-def encode(text, codes):
-    return ''.join(codes[char] for char in text)
+        heapq.heappush(heap, [low1[0] + low2[0]] + low1[1:] + low2[1:])
+    return heapq.heappop(heap)[1:] if heap else []
 
-# Save Encoded Data to File
-def save_compressed_file(encoded_text):
-    with open("compressed.bin", "wb") as file:
-        bitarray(encoded_text).tofile(file)
-    messagebox.showinfo("Success", "Compressed file saved as 'compressed.bin'.")
+def generate_huffman_codes(tree_data):
+    huff_codes = {char: code for char, code in tree_data}
+    reverse_codes = {code: char for char, code in tree_data}
+    return huff_codes, reverse_codes
 
-# Load Encoded File
-def load_compressed_file():
-    with open("compressed.bin", "rb") as file:
-        binary_data = bitarray()
-        binary_data.fromfile(file)
-    return binary_data.to01()
+def encode_text(text, huff_codes):
+    return ''.join(huff_codes[char] for char in text)
 
-# Decode Encoded Text
-def decode(encoded_text, codes):
-    reverse_codes = {v: k for k, v in codes.items()}
-    current_code, decoded_text = "", ""
+def decode_text(encoded_text, reverse_codes):
+    current_code = ""
+    decoded = []
     for bit in encoded_text:
         current_code += bit
         if current_code in reverse_codes:
-            decoded_text += reverse_codes[current_code]
+            decoded.append(reverse_codes[current_code])
             current_code = ""
-    return decoded_text
+    return ''.join(decoded)
 
-# Compare File Sizes
-def compare_file_sizes():
-    original_size = os.path.getsize(input_filename)
-    compressed_size = os.path.getsize("compressed.bin")
-    compression_ratio = (1 - (compressed_size / original_size)) * 100
-    return original_size, compressed_size, compression_ratio
+def binary_string_to_bytes(binary_string):
+    padding = (8 - len(binary_string) % 8) % 8
+    binary_string = '0' * padding + binary_string
+    byte_array = bytearray(int(binary_string[i:i+8], 2) for i in range(0, len(binary_string), 8))
+    return byte_array, padding
 
-# Function to Handle Compression
-def compress():
-    global text, huffman_codes
-    text = read_input_file()
-    if not text:
-        return
+def bytes_to_binary_string(byte_array, padding=0):
+    binary_string = ''.join(f'{byte:08b}' for byte in byte_array)
+    return binary_string[padding:] if padding else binary_string
 
-    # Build Huffman Tree
-    huffman_tree_root = build_huffman_tree(text)
+def save_compressed_data(encoded_bytes, filename="compressed.bin"):
+    save_path = os.path.join(os.getcwd(), filename)
+    with open(save_path, "wb") as file:
+        file.write(encoded_bytes)
+    print(f"Compressed data saved to: {save_path}")
 
-    # Generate Huffman Codes
-    huffman_codes = generate_codes(huffman_tree_root)
+# ==================== GUI Integration ====================
 
-    # Encode the text
-    encoded_text = encode(text, huffman_codes)
+def load_file_into_box(target_box):
+    file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
+    if file_path:
+        with open(file_path, "r", encoding="utf-8") as file:
+            text = file.read()
+            target_box.delete("1.0", tk.END)
+            target_box.insert(tk.INSERT, text)
 
-    # Save compressed file
-    save_compressed_file(encoded_text)
+def open_file():
+    file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
+    if file_path:
+        with open(file_path, "r") as file:
+            content = file.read()
+            process_text(content)
 
-    # Display Huffman Codes
-    codes_display.delete("1.0", tk.END)
-    codes_display.insert(tk.END, "\n".join(f"'{char}': {code}" for char, code in
-    huffman_codes.items()))
+def process_text(content):
+    frequency = build_frequency_table(content)
+    tree = build_huffman_tree(frequency)
+    huff_codes, reverse_codes = generate_huffman_codes(tree)
 
-    # Display Compression Stats
-    original_size, compressed_size, compression_ratio = compare_file_sizes()
-    compression_info.set(f"Original: {original_size} bytes | Compressed:{compressed_size} bytes | Ratio: {compression_ratio:.2f}%")
+    encoded = encode_text(content, huff_codes)
+    encoded_bytes, padding = binary_string_to_bytes(encoded)
 
-# Function to Handle Decompression
-def decompress():
-    # Load compressed file
-    loaded_encoded_text = load_compressed_file()
+    save_compressed_data(encoded_bytes)
 
-    # Decode text
-    decoded_text = decode(loaded_encoded_text, huffman_codes)
+    text_area.delete("1.0", tk.END)
+    code_list = "\n".join([f"{char}: {code}" for char, code in huff_codes.items()])
+    text_area.insert(tk.INSERT, f"Huffman Codes:\n\n{code_list}\n")
 
-    # Display decoded text
-    decoded_text_display.delete("1.0", tk.END)
-    decoded_text_display.insert(tk.END, decoded_text)
+    compression_detail.config(
+        text=f"Original: {len(content)} bytes | Compressed: {len(encoded_bytes)} bytes | Ratio: {(len(encoded_bytes)/len(content))*100:.2f}%"
+    )
 
-    # Verify correctness
-    if text == decoded_text:
-        messagebox.showinfo("Success", "Decoding successful! Original text matches.")
-    else:
-        messagebox.showerror("Error", "Decoding failed! Original text does not match.")
-        
-# ---------------- GUI Implementation ----------------
-# Create Main Window
+def decode_bin_file(reverse_codes=None, padding=0):
+    file_path = filedialog.askopenfilename(filetypes=[("Binary Files", "*.bin")])
+    if file_path:
+        with open(file_path, "rb") as file:
+            encoded_bytes = file.read()
+            binary_string = bytes_to_binary_string(encoded_bytes, padding)
+
+            decoded_text_area.delete("1.0", tk.END)
+
+            if reverse_codes:
+                decoded = decode_text(binary_string, reverse_codes)
+                decoded_text_area.insert(tk.INSERT, decoded)
+            else:
+                decoded_text_area.insert(tk.INSERT, "Cannot decode without Huffman map.")
+
+# ==================== UI Setup ====================
+
 root = tk.Tk()
-root.title("Huffman Compression Tool")
-root.geometry("700x600")
-root.configure(bg="#f0f0f0")
-# Title Label
-title_label = tk.Label(root, text="📦 Huffman Coding Compression Tool",
-font=("Arial", 16, "bold"), bg="#f0f0f0")
-title_label.pack(pady=10)
-# File Selection Button
-file_button = tk.Button(root, text="📦 Select Text File", font=("Arial", 12),
-command=compress)
-file_button.pack(pady=5)
-# Compression Stats Label
-compression_info = tk.StringVar()
-compression_info.set("Compression details will appear here.")
-stats_label = tk.Label(root, textvariable=compression_info, font=("Arial", 12),
-bg="#f0f0f0", fg="blue")
-stats_label.pack(pady=5)
-# Huffman Codes Display
-codes_label = tk.Label(root, text="📦 Huffman Codes:", font=("Arial", 12, "bold"),
-bg="#f0f0f0")
-codes_label.pack()
-codes_display = scrolledtext.ScrolledText(root, width=50, height=10, font=("Arial",
-10))
-codes_display.pack()
-# Decode Button
-decode_button = tk.Button(root, text="📦 Decompress File", font=("Arial", 12),
-command=decompress)
-decode_button.pack(pady=5)
-# Decoded Text Display
-decoded_label = tk.Label(root, text="📦 Decoded Text:", font=("Arial", 12, "bold"),
-bg="#f0f0f0")
-decoded_label.pack()
-decoded_text_display = scrolledtext.ScrolledText(root, width=50, height=5,
-font=("Arial", 10))
-decoded_text_display.pack()
-# Run the GUI
+root.title("Huffman Coding Compression")
+
+# Input / output area
+text_area = scrolledtext.ScrolledText(root, width=60, height=15)
+text_area.pack()
+
+compression_detail = tk.Label(root, text="Compression details will appear here.")
+compression_detail.pack()
+
+decoded_text_area = scrolledtext.ScrolledText(root, width=60, height=10)
+decoded_text_area.pack()
+
+# Buttons
+tk.Button(root, text="Open Text File", command=open_file).pack()
+tk.Button(root, text="Decode Binary File", command=decode_bin_file).pack()
+
 root.mainloop()
