@@ -1,8 +1,8 @@
-import tkinter as tk
-from tkinter import filedialog, scrolledtext
 import heapq
 from collections import defaultdict
 import os
+import tkinter as tk
+from tkinter import filedialog
 
 # ==================== Huffman Coding Utilities ====================
 
@@ -59,7 +59,15 @@ def save_compressed_data(encoded_bytes, filename="compressed.bin"):
         file.write(encoded_bytes)
     print(f"Compressed data saved to: {save_path}")
 
-# ==================== GUI Integration ====================
+def load_text_file(path):
+    with open(path, "r", encoding="utf-8") as file:
+        return file.read()
+
+def load_binary_file(path):
+    with open(path, "rb") as file:
+        return file.read()
+
+# ==================== GUI-Compatible Utility ====================
 
 def load_file_into_box(target_box):
     file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
@@ -68,64 +76,3 @@ def load_file_into_box(target_box):
             text = file.read()
             target_box.delete("1.0", tk.END)
             target_box.insert(tk.INSERT, text)
-
-def open_file():
-    file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
-    if file_path:
-        with open(file_path, "r") as file:
-            content = file.read()
-            process_text(content)
-
-def process_text(content):
-    frequency = build_frequency_table(content)
-    tree = build_huffman_tree(frequency)
-    huff_codes, reverse_codes = generate_huffman_codes(tree)
-
-    encoded = encode_text(content, huff_codes)
-    encoded_bytes, padding = binary_string_to_bytes(encoded)
-
-    save_compressed_data(encoded_bytes)
-
-    text_area.delete("1.0", tk.END)
-    code_list = "\n".join([f"{char}: {code}" for char, code in huff_codes.items()])
-    text_area.insert(tk.INSERT, f"Huffman Codes:\n\n{code_list}\n")
-
-    compression_detail.config(
-        text=f"Original: {len(content)} bytes | Compressed: {len(encoded_bytes)} bytes | Ratio: {(len(encoded_bytes)/len(content))*100:.2f}%"
-    )
-
-def decode_bin_file(reverse_codes=None, padding=0):
-    file_path = filedialog.askopenfilename(filetypes=[("Binary Files", "*.bin")])
-    if file_path:
-        with open(file_path, "rb") as file:
-            encoded_bytes = file.read()
-            binary_string = bytes_to_binary_string(encoded_bytes, padding)
-
-            decoded_text_area.delete("1.0", tk.END)
-
-            if reverse_codes:
-                decoded = decode_text(binary_string, reverse_codes)
-                decoded_text_area.insert(tk.INSERT, decoded)
-            else:
-                decoded_text_area.insert(tk.INSERT, "Cannot decode without Huffman map.")
-
-# ==================== UI Setup ====================
-
-root = tk.Tk()
-root.title("Huffman Coding Compression")
-
-# Input / output area
-text_area = scrolledtext.ScrolledText(root, width=60, height=15)
-text_area.pack()
-
-compression_detail = tk.Label(root, text="Compression details will appear here.")
-compression_detail.pack()
-
-decoded_text_area = scrolledtext.ScrolledText(root, width=60, height=10)
-decoded_text_area.pack()
-
-# Buttons
-tk.Button(root, text="Open Text File", command=open_file).pack()
-tk.Button(root, text="Decode Binary File", command=decode_bin_file).pack()
-
-root.mainloop()
