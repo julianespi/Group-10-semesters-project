@@ -8,7 +8,7 @@ class CSUFScanner(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("CSUF Document Scanner & Pattern Extractor")
-        self.geometry("750x720")
+        self.geometry("760x720")
         self.configure(bg="#f4f4f4")
 
         self.frames = {}
@@ -53,7 +53,7 @@ class PlagiarismPage(ttk.Frame):
         super().__init__(parent)
         self.controller = controller
 
-        ttk.Label(self, text="Plagiarism Checker", font=("Segoe UI", 14, "bold")).pack(pady=10)
+        ttk.Label(self, text="Plagiarism Checker", font=("Segoe UI", 14, "bold"), foreground="#2F2D92").pack(pady=10)
         ttk.Button(self, text="← Back to Home", command=lambda: controller.show_frame(HomePage)).pack(anchor="w", padx=10)
 
         # Upload Section
@@ -220,25 +220,25 @@ class SearchPage(ttk.Frame):
         super().__init__(parent)
         self.controller = controller
 
-        ttk.Label(self, text="Real-Time Search", font=("Segoe UI", 14, "bold"), foreground="#2F2D92").pack(pady=5)
+        ttk.Label(self, text="Real-Time Search", font=("Segoe UI", 14, "bold"), foreground="#2F2D92").pack(pady=10)
         ttk.Button(self, text="← Back to Home", command=lambda: controller.show_frame(HomePage)).pack(anchor="w", padx=10)
 
         # Upload & Search Section
-        control_frame = ttk.Frame(self)
-        control_frame.pack(padx=15, pady=10, fill='x')
+        upload_frame = ttk.LabelFrame(self, text="Upload and Search")
+        upload_frame.pack(fill="x", padx=15, pady=10)
 
-        ttk.Button(control_frame, text="Upload Document", command=self.load_document).pack(side="left", padx=10)
-        ttk.Label(control_frame, text="Search Word/Phrase:").pack(side="left", padx=5)
+        ttk.Button(upload_frame, text="Upload Document", command=self.load_document).grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        ttk.Label(upload_frame, text="Search Word/Phrase:").grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
-        self.search_entry = ttk.Entry(control_frame, width=30)
-        self.search_entry.pack(side="left", padx=5)
+        self.search_entry = ttk.Entry(upload_frame, width=30)
+        self.search_entry.grid(row=0, column=2, padx=10, pady=10, sticky="w")
         self.search_entry.bind("<KeyRelease>", self.perform_search)
 
-        self.result_label = ttk.Label(control_frame, text="Occurrences Found: 0")
-        self.result_label.pack(side="left", padx=10)
+        self.result_label = ttk.Label(upload_frame, text="Occurrences Found: 0")
+        self.result_label.grid(row=0, column=3, padx=10, pady=10, sticky="w")
 
-        # Text Box
-        self.text_box = scrolledtext.ScrolledText(self, wrap="word", width=80, height=30, font=("Courier", 10))
+        # Text Box Section
+        self.text_box = scrolledtext.ScrolledText(self, wrap="word", width=80, height=20, font=("Courier", 10))
         self.text_box.pack(padx=15, pady=10)
         self.text_box.tag_config("highlight", background="yellow")
 
@@ -292,7 +292,7 @@ class SortingPage(ttk.Frame):
         super().__init__(parent)
         self.controller = controller
 
-        ttk.Label(self, text="Sort Documents", font=("Segoe UI", 14, "bold")).pack(pady=10)
+        ttk.Label(self, text="Sorting", font=("Segoe UI", 14, "bold"), foreground="#2F2D92").pack(pady=10)
         ttk.Button(self, text="← Back to Home", command=lambda: controller.show_frame(HomePage)).pack(anchor="w", padx=10)
 
         # Upload Folder Section 
