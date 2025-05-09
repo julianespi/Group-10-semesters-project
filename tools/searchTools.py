@@ -77,3 +77,27 @@ text = "Hello World! this is Computer Science"
 pattern = "Computer"
 #Output
 print("KMP match found at:", kmp_search(text, pattern))
+
+#naive string matching algorithm
+def naive_seach(text, pattern):
+    positions = [] #store indicies when patterns are found
+    n = len(text)
+    m = len(pattern)
+
+    #loop through all possible starting positions for i 
+    for i in range(n-m+1):
+        match = True #flag to track if char match
+        for j in range(m):
+            if text[i + j] != pattern[j]:
+                match = False #mismatch ofund
+                break
+        if match:
+            positions.append(i) #stre index of match
+    return positions
+
+#example text
+text = "Hello World! this is computer science"
+pattern = "computer"
+
+#provide output
+print("Naive string match found at: ", naive_seach(text,pattern))

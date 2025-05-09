@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, scrolledtext
+from tkinter import ttk, filedialog, scrolledtext, messagebox
 import tools.compression as compression
 import tools.searchTools as search
 
@@ -47,7 +47,25 @@ class HomePage(ttk.Frame):
             style.configure("Home.TButton", font=("Segoe UI", 12, "bold"), padding=20)
 
 
-# TODO: Add Rabin-Karp/KMP Backend
+def split_into_phrases(text, window_size=5):
+    words = text.split()
+    return [' '.join(words[i:i+window_size]) for i in range(len(words) - window_size + 1)]
+
+def show_scrollable_message(title, message):
+    popup = tk.Toplevel()
+    popup.title(title)
+    popup.geometry("500x300")
+    popup.resizable(False, False)
+
+    ttk.Label(popup, text=title, font=("Segoe UI", 12, "bold")).pack(pady=10)
+
+    text_area = scrolledtext.ScrolledText(popup, wrap=tk.WORD, width=60, height=10)
+    text_area.pack(padx=10, pady=10)
+    text_area.insert(tk.END, message)
+    text_area.config(state='disabled')  # make read-only
+
+    ttk.Button(popup, text="Close", command=popup.destroy).pack(pady=10)
+
 class PlagiarismPage(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -69,7 +87,7 @@ class PlagiarismPage(ttk.Frame):
         ttk.Button(upload_frame, text="Upload Main Text", command=lambda: self.load_file_into_box(self.box1)).grid(row=0, column=0, padx=10, pady=10)
         ttk.Button(upload_frame, text="Upload Comparison Text", command=lambda: self.load_file_into_box(self.box2)).grid(row=0, column=1, padx=10, pady=10)
 
-        # Algoritm Choice Section
+        # Algorithm Choice Section
         control_frame = ttk.LabelFrame(self, text="Plagiarism Detection")
         control_frame.pack(fill="x", padx=15, pady=10)
 
@@ -77,7 +95,62 @@ class PlagiarismPage(ttk.Frame):
         self.algorithm_choice.set("Choose Matching Algorithm")
         self.algorithm_choice.grid(row=0, column=0, padx=10, pady=10)
 
-        ttk.Button(control_frame, text="Run Plagiarism Check").grid(row=0, column=1, padx=10, pady=10)
+        ttk.Button(control_frame, text="Run Plagiarism Check", command=self.plagiarism_check).grid(row=0, column=1, padx=10, pady=10)
+
+        # Similarity Percentage Bar Section
+        self.similarity_label = ttk.Label(self, text="Similarity: 0%")
+        self.similarity_label.pack(pady=10)
+
+        # Canvas to show the similarity bar
+        self.similarity_canvas = tk.Canvas(self, width=400, height=40, bg="white")
+        self.similarity_canvas.pack(pady=10)
+
+    def plagiarism_check(self):
+        text1 = self.box1.get("1.0", tk.END).strip()
+        text2 = self.box2.get("1.0", tk.END).strip()
+
+        if not text1 or not text2:
+            messagebox.showwarning("Input Missing", "Both documents must be loaded.")
+            return
+
+        algo = self.algorithm_choice.get()
+        if algo not in ["KMP", "Rabin-Karp"]:
+            messagebox.showwarning("Algorithm Missing", "Please select a matching algorithm.")
+            return
+
+        # Phrase segmentation (e.g., 5-word phrases)
+        phrases = []
+        words = text1.split()
+        phrase_len = 4
+
+        for i in range(len(words) - phrase_len + 1):
+            phrase = " ".join(words[i:i + phrase_len])
+            phrases.append(phrase)
+
+        matches = []
+        for phrase in phrases:
+            if algo == "KMP":
+                found = search.kmp_search(text2, phrase)
+            else:
+                found = search.rabin_karp(text2, phrase)
+
+            if found:
+                matches.append((phrase, found))
+
+        total_checked = len(phrases)
+        matched_count = len(matches)
+        similarity_percent = (matched_count / total_checked) * 100 if total_checked else 0
+
+        # Update the similarity bar and label
+        self.update_similarity_bar(similarity_percent)
+
+        # Display plagiarism results
+        if matches:
+            result_text = "\n\n".join([f"'{p}' found at positions {pos}" for p, pos in matches])
+            result_text = f"Similarity: {similarity_percent:.2f}%\n\n" + result_text
+            messagebox.showinfo("Plagiarism Detected", f"Matching phrases found:\n\n{result_text}")
+        else:
+            messagebox.showinfo("No Plagiarism Detected", "No matching phrases found.")
 
     def load_file_into_box(self, box):
         file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
@@ -87,8 +160,24 @@ class PlagiarismPage(ttk.Frame):
                 box.delete("1.0", tk.END)
                 box.insert(tk.END, contents)
 
-    def plagiarism_check(self):
-        print("Checking... ")
+    def update_similarity_bar(self, similarity_percent):
+        # Update the similarity percentage label
+        self.similarity_label.config(text=f"Similarity: {similarity_percent:.2f}%")
+
+        # Scale the similarity percentage to fit the canvas width
+        bar_width = similarity_percent * 4  # 100% corresponds to 400px in width
+
+        # Set color based on similarity
+        if similarity_percent > 70:
+            bar_color = "red"
+        elif similarity_percent > 40:
+            bar_color = "yellow"
+        else:
+            bar_color = "green"
+
+        # Clear any previous bars and draw a new one
+        self.similarity_canvas.delete("all")
+        self.similarity_canvas.create_rectangle(0, 0, bar_width, 40, fill=bar_color)
 
 
 class CompressionPage(ttk.Frame):
