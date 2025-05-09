@@ -1,3 +1,8 @@
+##  Authors
+- Julian Espinoza
+- Helen Ngo
+- Isaias Soria
+
 ##  Objective  
 This tool is designed to scan student documents for plagiarism and extract key information such as duplicate phrases, citation structures, and compression statistics. It combines classical algorithms with user-friendly GUI functionality to support academic integrity and document analysis.
 
