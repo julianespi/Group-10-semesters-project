@@ -1,7 +1,10 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, scrolledtext, messagebox
+import os
+from datetime import datetime
 import tools.compression as compression
 import tools.searchTools as search
+from tools.sorting import merge_sort, counting_sort
 
 # Frame
 class CSUFScanner(tk.Tk):
@@ -380,42 +383,135 @@ class SortingPage(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
+        self.files_metadata = []
 
         ttk.Label(self, text="Sorting", font=("Segoe UI", 14, "bold"), foreground="#2F2D92").pack(pady=10)
         ttk.Button(self, text="← Back to Home", command=lambda: controller.show_frame(HomePage)).pack(anchor="w", padx=10)
 
-        # Upload Folder Section 
         folder_frame = ttk.LabelFrame(self, text="Upload Document Folder")
         folder_frame.pack(fill="x", padx=15, pady=10)
 
         ttk.Button(folder_frame, text="Upload Folder", command=self.upload_folder).grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        self.folder_label = ttk.Label(folder_frame, text="No folder selected")
+        self.folder_label.grid(row=0, column=1, sticky="w")
 
-        self.folder_label = ttk.Label(folder_frame, text="No folder selected", font=("Segoe UI", 10))
-        self.folder_label.grid(row=0, column=1, padx=10, pady=10, sticky="w")
+        sort_frame = ttk.LabelFrame(self, text="Sorting Options")
+        sort_frame.pack(fill="x", padx=15, pady=10)
 
-        # Sorting Options
-        sorting_frame = ttk.LabelFrame(self, text="Sorting Options")
-        sorting_frame.pack(fill="x", padx=15, pady=10)
+        self.sort_field = ttk.Combobox(sort_frame, values=["author", "title", "date"], state="readonly")
+        self.sort_field.set("Sort by...")
+        self.sort_field.grid(row=0, column=0, padx=10, pady=10)
 
-        ttk.Label(sorting_frame, text="Sort By:", font=("Segoe UI", 10)).grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        self.sort_algo = ttk.Combobox(sort_frame, values=["Merge Sort", "Counting Sort"], state="readonly")
+        self.sort_algo.set("Choose Algorithm")
+        self.sort_algo.grid(row=0, column=1, padx=10, pady=10)
 
+        ttk.Button(sort_frame, text="Sort Documents", command=self.sort_documents).grid(row=0, column=2, padx=10, pady=10)
 
-        self.sort_choice = ttk.Combobox(sorting_frame, values=["Author", "Title", "Date"], width=20)
-        self.sort_choice.set("Sort By")
-        self.sort_choice.grid(row=0, column=0, padx=10, pady=10)
-        
-        ttk.Button(sorting_frame, text="Sort", command=self.sort_documents).grid(row=0, column=2, padx=10, pady=10, sticky="w")
+        self.result_box = scrolledtext.ScrolledText(self, width=80, height=20, font=("Courier", 10))
+        self.result_box.pack(padx=15, pady=10)
+        self.result_box.config(state="disabled")  # make it read-only
 
-        
     def upload_folder(self):
-        folder_path = filedialog.askdirectory()
-        if folder_path:
-            self.folder_label.config(text=folder_path)
-        else:
-            self.folder_label.config(text="No folder selected")
+        folder = filedialog.askdirectory()
+        if folder:
+            self.folder_label.config(text=folder)
+            self.files_metadata = self.scan_folder(folder)
+
+    def scan_folder(self, folder):
+        files = []
+        for filename in os.listdir(folder):
+            if filename.endswith(".txt"):
+                path = os.path.join(folder, filename)
+                author = title = date_str = "Unknown"
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        for _ in range(3):  # only check first 3 lines
+                            line = f.readline().strip()
+                            if line.lower().startswith("author:"):
+                                author = line.split(":", 1)[1].strip()
+                            elif line.lower().startswith("title:"):
+                                title = line.split(":", 1)[1].strip()
+                            elif line.lower().startswith("date:"):
+                                date_str = line.split(":", 1)[1].strip()
+                    try:
+                        date_obj = datetime.strptime(date_str, "%B %d, %Y")
+                    except Exception:
+                        date_obj = None
+                except Exception as e:
+                    print(f"Error reading {filename}: {e}")
+                    date_obj = None
+
+                files.append({
+                    "filename": filename,
+                    "author": author,
+                    "title": title,
+                    "date": date_obj,
+                    "date_str": date_str,
+                    "year": date_obj.year if date_obj else 0
+                })
+
+        return files
 
     def sort_documents(self):
-        print("Sorting... ")
+        if not self.files_metadata:
+            messagebox.showwarning("No Files", "Please upload a folder with documents first.")
+            return
+
+        field = self.sort_field.get()
+        algo = self.sort_algo.get()
+
+        if field == "date" and algo != "Counting Sort":
+            messagebox.showwarning("Invalid Sort", "Date can only be sorted using Counting Sort.")
+            return
+        elif field in ["author", "title"] and algo != "Merge Sort":
+            messagebox.showwarning("Invalid Sort", f"{field.capitalize()} can only be sorted using Merge Sort.")
+            return
+
+        # Perform the sorting
+        if algo == "Merge Sort":
+            sorted_data = merge_sort(self.files_metadata, key=lambda x: x[field].lower())
+        elif algo == "Counting Sort":
+            sorted_data = counting_sort(self.files_metadata)
+
+        self.display_sorted_results(sorted_data)
+
+    def display_sorted_results(self, data):
+        # Ensure the text box is editable
+        self.result_box.config(state="normal")
+        self.result_box.delete("1.0", tk.END)
+
+        # If there's no data to display, show a message
+        if not data:
+            self.result_box.insert(tk.END, "No documents to display.\n")
+            self.result_box.config(state="disabled")
+            return
+
+        # Calculate maximum lengths for each column, handle None values gracefully
+        max_filename_len = max(len(item['filename']) if item['filename'] else 0 for item in data)
+        max_author_len = max(len(item['author']) if item['author'] else 0 for item in data)
+        max_title_len = max(len(item['title']) if item['title'] else 0 for item in data)
+        max_date_len = max(len(item['date_str']) if item['date_str'] else 0 for item in data)
+
+
+        # Set padding for each column
+        filename_width = max(max_filename_len, len('Filename')) + 2  # Add extra padding
+        author_width = max(max_author_len, len('Author')) + 2
+        title_width = max(max_title_len, len('Title')) + 2
+        date_width = max(max_date_len, len('Date')) + 2  # Dynamically calculate the date column width
+
+        # Header
+        header = f"{'Filename':<{filename_width}} | {'Author':<{author_width}} | {'Title':<{title_width}} | {'Date':<{date_width}}\n"
+        self.result_box.insert(tk.END, header)
+        self.result_box.insert(tk.END, "-" * (filename_width + author_width + title_width + date_width + 9) + "\n")  # Add separator line
+
+        # Display each document's details with proper padding
+        for item in data:
+            line = f"{(item['filename'] or ''):<{filename_width}} | {(item['author'] or ''):<{author_width}} | {(item['title'] or ''):<{title_width}} | {(item['date_str'] or ''):<{date_width}}\n"
+            self.result_box.insert(tk.END, line)
+
+        # Disable editing after inserting text
+        self.result_box.config(state="disabled")
 
 
 if __name__ == "__main__":
