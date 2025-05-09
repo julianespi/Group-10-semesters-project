@@ -1,0 +1,15 @@
+Author: Lena Morales
+Title: Digital Foundations
+Date: March 17, 2023
+
+"Computer science explores the processes that work with data and how these processes 
+can be expressed as programs. It facilitates the application of algorithms to process, 
+store, and transmit digital information. A computer scientist studies 
+the theory of computation and the practice of designing software systems. Its fields 
+can be divided into theoretical and practical disciplines. The field is generally split 
+into conceptual and applied areas. For instance, computational complexity theory deals 
+with abstract mathematical models, whereas computer graphics focuses on tangible 
+applications. Programming language theory considers approaches to the description 
+of computational processes and computer programming applies these ideas through 
+code and intricate systems. Human–computer interaction tackles the difficulties 
+involved in ensuring that computers are intuitive, practical, and inclusive."

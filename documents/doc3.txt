@@ -1,0 +1,15 @@
+Author: Jonathan Pierce
+Title: The Art of Urban Renewal
+Date: November 3, 2020
+
+"Urban renewal is a complex process that involves the revitalization of deteriorating 
+city areas. It aims to transform underdeveloped spaces into thriving communities, often 
+with an emphasis on sustainable growth and cultural preservation. This process blends 
+urban planning, architecture, and social dynamics to create spaces that are both 
+functional and livable. Key aspects of urban renewal include the renovation of historical
+buildings, the development of green spaces, and the creation of affordable housing options.
+While urban renewal can improve the overall quality of life, it also raises concerns about 
+gentrification, as rising property values often push out long-time residents. The goal is 
+to strike a balance between modernizing the area while maintaining its unique character 
+and diversity."
+
