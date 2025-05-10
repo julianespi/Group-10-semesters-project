@@ -206,8 +206,8 @@ class CompressionPage(ttk.Frame):
         self.box2 = scrolledtext.ScrolledText(upload_frame, width=40, height=10, font=("Courier", 10))
         self.box2.grid(row=1, column=1, padx=10, pady=10)
 
-        ttk.Button(upload_frame, text="Upload Main Text", command=lambda: self.load_file_into_box(self.box1)).grid(row=0, column=0, padx=10, pady=10)
-        ttk.Button(upload_frame, text="Upload Comparison Text", command=lambda: self.load_file_into_box(self.box2)).grid(row=0, column=1, padx=10, pady=10)
+        ttk.Button(upload_frame, text="Upload Document", command=lambda: self.load_file_into_box(self.box1)).grid(row=0, column=0, padx=10, pady=10)
+        ttk.Button(upload_frame, text="Upload Document", command=lambda: self.load_file_into_box(self.box2)).grid(row=0, column=1, padx=10, pady=10)
 
         ttk.Button(self, text="Compress Documents", command=self.compress_documents).pack(pady=10)
 
@@ -599,6 +599,7 @@ class SortingPage(ttk.Frame):
 
         field = self.sort_field.get()
         algo = self.sort_algo.get()
+        sorted_data = ""
 
         if field == "date" and algo != "Counting Sort":
             messagebox.showwarning("Invalid Sort", "Date can only be sorted using Counting Sort.")
@@ -612,7 +613,7 @@ class SortingPage(ttk.Frame):
             sorted_data = merge_sort(self.files_metadata, key=lambda x: x[field].lower())
         elif algo == "Counting Sort":
             sorted_data = counting_sort(self.files_metadata)
-
+        
         self.display_sorted_results(sorted_data)
 
     def display_sorted_results(self, data):

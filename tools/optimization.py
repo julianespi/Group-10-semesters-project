@@ -24,17 +24,3 @@ def dp_select(files, time_limit):
     return dp[n][time_limit], selected[::-1]  # Reverse to keep original order
 
 
-#Example usage!
-files = [
-    {'name': 'doc1', 'scan_time': 10, 'risk_score': 80},
-    {'name': 'doc2', 'scan_time': 15, 'risk_score': 90}
-]
-time_limit = 20
-
-# Greedy
-greedy_score, greedy_selected = greedy_select(files, time_limit)
-print(f"[Greedy] Score: {greedy_score}, Files: {greedy_selected}")
-
-# DP
-dp_score, dp_selected = dp_select(files, time_limit)
-print(f"[DP]     Score: {dp_score}, Files: {dp_selected}")
