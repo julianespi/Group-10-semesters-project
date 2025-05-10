@@ -1,5 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, scrolledtext, messagebox
+import networkx as nx
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import os
 from datetime import datetime
 import tools.compression as compression
@@ -368,17 +371,153 @@ class SearchPage(ttk.Frame):
         self.result_label.config(text=f"Occurrences Found: {count}")
 
 
-# TODO: Add BFS/DFS inputs and visualization later
 class GraphAnalysisPage(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
+        self.graph = nx.Graph()
+        self.pos = {}
+        self.traversal_type = tk.StringVar(value="BFS")
+        self.visited_order = []
+        self.visited_set = set()
+        self.animation = False
 
         ttk.Label(self, text="Graph Analysis", font=("Segoe UI", 14, "bold"), foreground="#2F2D92").pack(pady=10)
         ttk.Button(self, text="← Back to Home", command=lambda: controller.show_frame(HomePage)).pack(anchor="w", padx=10)
 
+        self.setup()
 
-# TODO: Add Merge or Counting Sort Backend
+    # Setup the canvas components
+    def setup(self):
+        control_frame = ttk.LabelFrame(self, text="Upload and Analyze")
+        control_frame.pack(fill="x", padx=15, pady=10)
+
+        ttk.Button(control_frame, text="Upload Folder", command=self.load_documents_folder).grid(row=0, column=0, padx=10, pady=10)
+
+        ttk.Label(control_frame, text="Start Node:").grid(row=0, column=1, padx=10, pady=10)
+        self.start_node = ttk.Combobox(control_frame, state="readonly")
+        self.start_node.grid(row=0, column=2, padx=10, pady=10)
+
+        ttk.Radiobutton(control_frame, text="BFS", variable=self.traversal_type, value="BFS").grid(row=0, column=3, padx=10, pady=10)
+        ttk.Radiobutton(control_frame, text="DFS", variable=self.traversal_type, value="DFS").grid(row=0, column=4, padx=10, pady=10)
+
+        ttk.Button(control_frame, text="Start Traversal", command=self.start_traversal).grid(row=0, column=5, padx=10, pady=10)
+
+        self.result_label = ttk.Label(self, text="Traversal Order: ", wraplength=700)
+        self.result_label.pack(pady=10)
+        self.canvas_frame = ttk.LabelFrame(self, text="Graph Visualization")
+        self.canvas_frame.pack(fill="both", expand=True, padx=15, pady=10)
+        self.figure, self.ax = plt.subplots(figsize=(5, 3))  # Adjusted size
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.canvas_frame)
+        self.canvas.get_tk_widget().pack(fill="both", expand=True)
+        self.ax.axis('off')  # Blank canvas by default
+        self.canvas.draw()
+
+    def load_documents_folder(self):
+        folder = filedialog.askdirectory()
+        if folder:
+            doc_texts = {}
+            for filename in os.listdir(folder):
+                if filename.endswith(".txt"):
+                    path = os.path.join(folder, filename)
+                    with open(path, 'r', encoding='utf-8') as f:
+                        words = set(f.read().lower().split())
+                        doc_texts[filename] = words
+
+            # Build graph from documents
+            self.graph.clear()
+            self.graph.add_nodes_from(doc_texts.keys())
+
+            for doc1, words1 in doc_texts.items():
+                for doc2, words2 in doc_texts.items():
+                    if doc1 != doc2 and len(words1.intersection(words2)) >= 3:
+                        self.graph.add_edge(doc1, doc2)
+
+            self.pos = nx.spring_layout(self.graph, seed=42)
+            self.start_node['values'] = list(self.graph.nodes)
+            self.draw_graph()
+
+    def draw_graph(self, highlight_node=None):
+        self.ax.clear()
+        if not self.graph.nodes:
+            self.ax.axis('off')
+            self.canvas.draw()
+            return
+
+        node_colors = []
+        for node in self.graph.nodes():
+            if node == highlight_node:
+                node_colors.append("orange")
+            elif node in self.visited_set:
+                node_colors.append("#A2CFFE")
+            else:
+                node_colors.append("lightgray")
+
+        nx.draw(self.graph, self.pos, with_labels=True, ax=self.ax,
+                node_color=node_colors, node_size=1000, font_size=10)
+        self.canvas.draw()
+
+    def start_traversal(self):
+        if not self.graph.nodes:
+            messagebox.showerror("Error", "Please upload a folder with documents first.")
+            return
+
+        start = self.start_node.get()
+        if not start or start not in self.graph:
+            messagebox.showerror("Error", "Please select a valid start node.")
+            return
+
+        self.visited_order = []
+        self.visited_set = set()
+        self.animation = True
+
+        if self.traversal_type.get() == "BFS":
+            self.queue = [start]
+            self.visited_set.add(start)
+            self.bfs()
+        else:
+            self.stack = [start]
+            self.dfs()
+
+    def bfs(self):
+        if not self.queue:
+            self.finish_traversal()
+            return
+
+        node = self.queue.pop(0)
+        self.visited_order.append(node)
+        self.result_label.config(text="Traversal Order: " + " → ".join(self.visited_order))
+        self.draw_graph(highlight_node=node)
+
+        for neighbor in self.graph.neighbors(node):
+            if neighbor not in self.visited_set:
+                self.queue.append(neighbor)
+                self.visited_set.add(neighbor)
+        self.after(700, self.bfs)
+
+    def dfs(self):
+        while self.stack:
+            node = self.stack.pop()
+            if node not in self.visited_set:
+                self.visited_set.add(node)
+                self.visited_order.append(node)
+                self.result_label.config(text="Traversal Order: " + " → ".join(self.visited_order))
+                self.draw_graph(highlight_node=node)
+
+                neighbors = list(self.graph.neighbors(node))
+                neighbors.reverse()
+                self.stack.extend(neighbors)
+
+                self.after(700, self.dfs)
+                return
+        self.finish_traversal()
+
+    def finish_traversal(self):
+        self.animation = False
+        self.draw_graph()
+        messagebox.showinfo("Done", f"{self.traversal_type.get()} traversal complete!")
+
+
 class SortingPage(ttk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)

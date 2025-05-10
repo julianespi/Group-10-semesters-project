@@ -28,7 +28,7 @@ def rabin_karp(text, pattern, q=101):
 text = "Hello World! this is Computer Science"
 pattern = "Computer"
 #Output
-print("Rabin Karp match found at:", rabin_karp(text, pattern))
+#print("Rabin Karp match found at:", rabin_karp(text, pattern))
 
 
 
@@ -76,7 +76,7 @@ def kmp_search(text, pattern):
 text = "Hello World! this is Computer Science"
 pattern = "Computer"
 #Output
-print("KMP match found at:", kmp_search(text, pattern))
+#print("KMP match found at:", kmp_search(text, pattern))
 
 #naive string matching algorithm
 def naive_seach(text, pattern):
@@ -100,4 +100,4 @@ text = "Hello World! this is computer science"
 pattern = "computer"
 
 #provide output
-print("Naive string match found at: ", naive_seach(text,pattern))
+#print("Naive string match found at: ", naive_seach(text,pattern))
